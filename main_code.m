@@ -56,10 +56,15 @@ while sub_trigger.LatestMessage.data
     % calculate PA coordinate 
     % this coordinate is in the gray image, not the original image
     [x, y, ~] = calculate_PA_coordinates();
+    
+    % transform the coordinates from the 2D PA image to the Cartesian frame
+    r = 5; % the radius of the TRUS
+    [x_M, y_M, z_M] = PAImage2Cartesian(x, y, target_angle, r);
+    
     msg_PA_coordinates = rosmessage(pub_pos);
-    msg_PA_coordinates.x = x;
-    msg_PA_coordinates.y = y;
-    msg_PA_coordinates.z = target_angle;
+    msg_PA_coordinates.x = x_M;
+    msg_PA_coordinates.y = y_M;
+    msg_PA_coordinates.z = z_M;
 %     msg_PA_coordinates.x = 66.6666;
 %     msg_PA_coordinates.y = 99.9999;
 %     msg_PA_coordinates.z = 33.3333;
