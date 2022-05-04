@@ -1,7 +1,7 @@
 function [x, y, intensity] = calculate_PA_coordinates()
 %dir_ = uigetdir('..\..\data');
 %dir_ = path;
-dir_ = 'G:\JHU\EN. 601.656 Computer Integrated Surgery 2\cis2_code\cis2\scan_-05deg'; % use full path of the folder storing .daq files
+dir_ = 'G:\JHU\EN. 601.656 Computer Integrated Surgery 2\cis2_code\cis2\source1\scan_-02deg'; % use full path of the folder storing .daq files
 bFreqFilter_ = 1;
 pub_image = ros.Publisher(ros_node, '/PA_image', 'sensor_msgs/Image','DataFormat','struct');
 
@@ -59,7 +59,6 @@ env_data = mid_proc(bfed_data, mid_, acoustic_, bf_);
 %% plot image
 %figure(1);
 figure('visible','off')
-
 img_orig = imagesc(axis_x*1e3, axis_z*1e3, env_data);%/max(env_data(:))));
 orig = img_orig.CData;
 
@@ -119,13 +118,9 @@ y = center_pos(2);
 
 % send image to the GUI
 msg_image = rosmessage(pub_image); 
-msg_image.Data = orig;
-orig = orig.plot(x, y)
-% ------------------------
-rgb = cat(3,orig,orig,orig);
-rgb = PointCircle(rgb, 5, x, y, [255, 0, 0]);
-imshow(rgb)
-%---------------------------
+rgb = cat(3,img_gray,img_gray,img_gray);
+rgb = PointCircle(rgb, 2, y, x, [255, 0, 0]);
+msg_image.Data = rgb;
 send(pub_image, msg_image);
 clear('pub_image');
 % disp(x)
