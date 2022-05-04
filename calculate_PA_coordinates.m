@@ -120,6 +120,12 @@ y = center_pos(2);
 % send image to the GUI
 msg_image = rosmessage(pub_image); 
 msg_image.Data = orig;
+orig = orig.plot(x, y)
+% ------------------------
+rgb = cat(3,orig,orig,orig);
+rgb = PointCircle(rgb, 5, x, y, [255, 0, 0]);
+imshow(rgb)
+%---------------------------
 send(pub_image, msg_image);
 clear('pub_image');
 % disp(x)
