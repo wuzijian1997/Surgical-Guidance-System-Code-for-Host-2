@@ -2,8 +2,8 @@ function [x, y, intensity] = calculate_PA_coordinates()
 %dir_ = uigetdir('..\..\data');
 %dir_ = path;
 dir_ = 'G:\JHU\EN. 601.656 Computer Integrated Surgery 2\cis2_code\cis2\scan_-05deg'; % use full path of the folder storing .daq files
-
 bFreqFilter_ = 1;
+pub_image = ros.Publisher(ros_node, '/PA_image', 'sensor_msgs/Image','DataFormat','struct');
 
 %% DAQ data acquisition setup
 frameNum = 400;
@@ -69,7 +69,7 @@ img = imagesc(axis_x*1e3, axis_z*1e3, (env_data/max(env_data(:))));
 x_coord = img.XData;
 y_coord = img.YData;
 
-colormap default; colorbar;
+% colormap default; colorbar;
 % xlabel('lateral (mm'); ylabel('axial (mm');
 % axis equal; axis tight;
 % caxis([0 1]);
@@ -116,6 +116,12 @@ if intensity < 6
 end
 x = center_pos(1);
 y = center_pos(2);
+
+% send image to the GUI
+msg_image = rosmessage(pub_image); 
+msg_image.Data = orig;
+send(pub_image, msg_image);
+clear('pub_image');
 % disp(x)
 % disp(y)
 % disp(intensity)
