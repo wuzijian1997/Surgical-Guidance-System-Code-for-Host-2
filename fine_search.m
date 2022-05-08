@@ -21,7 +21,7 @@ function target_angle = fine_search(spot_range, ros_node)
         end
         disp('rotated to goal angle');
         % calculate intensity from beam forming image
-        [~, ~, intensity_value] = calculate_PA_coordinates();
+        [~, ~, intensity_value] = calculate_PA_coordinates(ros_node);
         sample_intensity = [sample_intensity, intensity_value];
     end
     

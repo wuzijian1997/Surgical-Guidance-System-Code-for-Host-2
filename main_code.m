@@ -55,7 +55,7 @@ while sub_trigger.LatestMessage.data
     
     % calculate PA coordinate 
     % this coordinate is in the gray image, not the original image
-    [x, y, ~] = calculate_PA_coordinates();
+    [x, y, ~] = calculate_PA_coordinates(ros_node);
     
     % transform the coordinates from the 2D PA image to the Cartesian frame
     r = 5; % the radius of the TRUS

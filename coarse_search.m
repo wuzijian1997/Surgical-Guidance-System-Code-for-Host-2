@@ -19,7 +19,7 @@ function [iteration_times, spot_range] = coarse_search(TRUS_pos_init, sample_tim
         disp('rotated to goal angle');
         % calculate intensity from beam forming image
         TRUSPosition = TRUS_pos_init + sensitive_range * (i - 1);
-        [~, ~, intensity_value] = calculate_PA_coordinates();
+        [~, ~, intensity_value] = calculate_PA_coordinates(ros_node);
         if (intensity_value == 0)
             continue;
         else

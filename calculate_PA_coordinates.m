@@ -1,9 +1,8 @@
-function [x, y, intensity] = calculate_PA_coordinates()
-%dir_ = uigetdir('..\..\data');
-%dir_ = path;
-dir_ = 'G:\JHU\EN. 601.656 Computer Integrated Surgery 2\cis2_code\cis2\source1\scan_-02deg'; % use full path of the folder storing .daq files
+function [x, y, intensity] = calculate_PA_coordinates(ros_node)
+%dir_ = 'G:\JHU\EN. 601.656 Computer Integrated Surgery 2\PA_data'; % use full path of the folder storing .daq files
+dir_ = 'G:\JHU\EN. 601.656 Computer Integrated Surgery 2\cis2_code\cis2\source2\scan_17deg';
 bFreqFilter_ = 1;
-pub_image = ros.Publisher(ros_node, '/PA_image', 'sensor_msgs/Image','DataFormat','struct');
+pub_image = ros.Publisher(ros_node, '/naive_registration/Display/PA_Image', 'sensor_msgs/Image','DataFormat','struct');
 
 %% DAQ data acquisition setup
 frameNum = 400;
@@ -118,9 +117,24 @@ y = center_pos(2);
 
 % send image to the GUI
 msg_image = rosmessage(pub_image); 
-rgb = cat(3,img_gray,img_gray,img_gray);
-rgb = PointCircle(rgb, 2, y, x, [255, 0, 0]);
-msg_image.Data = rgb;
+img_gray = transpose(img_gray);
+rgb = cat(3,img_gray * 255,img_gray * 255,img_gray * 255);
+rgb = PointCircle(rgb, 2, x, y, [0, 0, 255]);
+rgb = uint8(rgb);
+msg_image.encoding = 'bgr8';
+msg_image.height = uint32(128);
+msg_image.width = uint32(755);
+msg_image.step = uint32(755 * 3);
+reshape_image = [];
+for row_id = 1:msg_image.height
+    row = squeeze(rgb(row_id,:,:));
+    reshape_row = [];
+    for col_id = 1:msg_image.width
+        reshape_row = [reshape_row,row(col_id,:)];
+    end
+    reshape_image = [reshape_image, reshape_row];
+end
+msg_image.data = reshape_image;
 send(pub_image, msg_image);
 clear('pub_image');
 % disp(x)
