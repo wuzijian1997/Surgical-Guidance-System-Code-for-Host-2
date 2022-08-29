@@ -1,17 +1,17 @@
-function [x, y, intensity] = calculate_PA_coordinates(ros_node)
-%dir_ = 'G:\JHU\EN. 601.656 Computer Integrated Surgery 2\PA_data'; % use full path of the folder storing .daq files
-dir_ = 'G:\JHU\EN. 601.656 Computer Integrated Surgery 2\cis2_code\cis2\source2\scan_17deg';
+function [x, y, max_intensity] = calculate_PA_coordinates(ros_node, degree)
+dir_ = 'G:\JHU\EN. 601.656 Computer Integrated Surgery 2\PA_buf2000'; % use full path of the folder storing .daq files
 bFreqFilter_ = 1;
 pub_image = ros.Publisher(ros_node, '/naive_registration/Display/PA_Image', 'sensor_msgs/Image','DataFormat','struct');
 
 %% DAQ data acquisition setup
-frameNum = 400;
-numSample = 600;
-
+frameNum = 100;
+numSample = 2000;
 %% read DAQ data
 [mRcvData,vRcvData] = readDAQData(dir_, frameNum, numSample);
 
 %% visualization
+trim_ = 25;
+mRcvDataTrim = mRcvData(trim_:end,:);
 % figure(1);
 % imagesc(db((mRcvData/max(mRcvData(:))))); title('Averaged');
 % colormap gray
@@ -20,9 +20,11 @@ numSample = 600;
 
 %% filter
 if(bFreqFilter_)
-    idx = 96;
+    idx = 65;
     freqBW = [0.05 0.2];
-    [filteredmRcvData] = frequencyFiltering_(idx,freqBW,mRcvData);
+    [filteredmRcvData] = frequencyFiltering_(idx,freqBW,mRcvDataTrim);
+else
+    filteredmRcvData = mRcvDataTrim;
 end
 
 %% parameter setup
@@ -56,80 +58,61 @@ mid_.nDCRFcut = 1e6;
 env_data = mid_proc(bfed_data, mid_, acoustic_, bf_);
 
 %% plot image
-%figure(1);
-figure('visible','off')
-img_orig = imagesc(axis_x*1e3, axis_z*1e3, env_data);%/max(env_data(:))));
-orig = img_orig.CData;
-
-%figure(2)
-figure('visible','off')
+figure(25);
+% figure('visible','off')
+max_intensity = max(env_data(:));
 img = imagesc(axis_x*1e3, axis_z*1e3, (env_data/max(env_data(:))));
-x_coord = img.XData;
-y_coord = img.YData;
-
-% colormap default; colorbar;
-% xlabel('lateral (mm'); ylabel('axial (mm');
-% axis equal; axis tight;
-% caxis([0 1]);
-% set(gcf,'Position',[784 520 1079 421]);
-% set(gca,'FontSize',14,'FontWeight','bold');
+colormap default; colorbar;
+xlabel('lateral (mm'); ylabel('axial (mm');
+axis equal; axis tight;
+caxis([0 1]);
+set(gcf,'Position',[99.4000 162.6000 512 420.8000]);
+set(gca,'FontSize',14,'FontWeight','bold');
+x_coordinates = img.XData;
+y_coordinates = img.YData;
+intensity = img.CData;
 
 %% calculate the centroid coordinates and intensity of PA spot
+
 img_gray = im2gray(img.CData);
 BW = imbinarize(img_gray,0.8);
-% figure(3)
-% imshow(BW);
-% hold on
-
-BW = bwareaopen(BW, 5);
-if (~any(BW))
-    x = 0;
-    y = 0;
-    intensity = 0;
-    disp('no spot found!')
-    return
-end
-
-L = bwlabel(BW);
+[L, num] = bwlabel(BW);
 stats = regionprops(L);
 area = cat(1, stats.Area);
 centroids = cat(1, stats.Centroid);
 idx = find(area == max(area));
 center_pos = centroids(idx,:);
-BW(find(L~=idx)) = 0;
-img_after_mask = BW .*  orig;
-%intensity = sum(img_after_mask, 'all');
+center_pos_mm = zeros(1,2);
+center_pos_mm(1) = interpn(1:128,axis_x,center_pos(1));
+center_pos_mm(2) = interpn(1:bf_.dth_spl,axis_z,center_pos(2));
 
-center_mm(1) = interpn(1:numel(x_coord), x_coord, center_pos(1));
-center_mm(2) = interpn(1:numel(y_coord), y_coord, center_pos(2));
-%intensity = interpn(y_coord, x_coord, img_gray, center_mm(2), center_mm(1),'spline');
-intensity = interpn(y_coord, x_coord, orig, center_mm(2), center_mm(1),'spline');
+figure(27)
+I = imagesc(axis_x*1e3, axis_z*1e3,img_gray);
+hold on
+plot(center_pos_mm(:,1)*1e3, center_pos_mm(:,2)*1e3, 'r*');
+axis tight; axis equal;
 
-if intensity < 6 
-    disp('don not find a PA spot!');
-    x = 0;
-    y = 0;
-    intensity = 0;
-    return;
-end
 x = center_pos(1);
 y = center_pos(2);
+center_list = [];
 
 % send image to the GUI
+img_gray = im2gray(I.CData);
 msg_image = rosmessage(pub_image); 
 img_gray = transpose(img_gray);
 rgb = cat(3,img_gray * 255,img_gray * 255,img_gray * 255);
 rgb = PointCircle(rgb, 2, x, y, [0, 0, 255]);
 rgb = uint8(rgb);
+%imwrite(rgb, strcat('G:\JHU\EN. 601.656 Computer Integrated Surgery 2\ground_truth_images\', 'proc_img', num2str(degree), '.jpg'));
 msg_image.encoding = 'bgr8';
-msg_image.height = uint32(128);
-msg_image.width = uint32(755);
-msg_image.step = uint32(755 * 3);
+msg_image.height = uint32(size(rgb,1));
+msg_image.width = uint32(size(rgb,2));
+msg_image.step = uint32(size(rgb,2) * size(rgb,3));
 reshape_image = [];
-for row_id = 1:msg_image.height
+for row_id = 1:size(rgb,1)
     row = squeeze(rgb(row_id,:,:));
     reshape_row = [];
-    for col_id = 1:msg_image.width
+    for col_id = 1:size(rgb,2)
         reshape_row = [reshape_row,row(col_id,:)];
     end
     reshape_image = [reshape_image, reshape_row];
@@ -137,11 +120,5 @@ end
 msg_image.data = reshape_image;
 send(pub_image, msg_image);
 clear('pub_image');
-% disp(x)
-% disp(y)
-% disp(intensity)
-% figure(4)
-% imshow(img_gray);
-% hold on
-% plot(center_pos(1), center_pos(2), 'r*');
+
 end

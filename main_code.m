@@ -1,19 +1,22 @@
 clear, clc;
 rosshutdown
-
-setenv('ROS_MASTER_URI','http://10.0.0.101:11311')
-setenv('ROS_IP','10.0.0.112')
-setenv('ROS_HOSTNAME','10.0.0.112')
-rosinit
-
+% 
+% 
 node_matlab = ros.Node('/node_matlab');
 % message type must on the list given by calling rosmsg("list")
 sub_trigger = ros.Subscriber(node_matlab,'/naive_registration/trigger_enable_msg','std_msgs/Bool','DataFormat','struct');
 pub_pos = ros.Publisher(node_matlab, '/naive_registration/PA_coordinates', 'geometry_msgs/Point','DataFormat','struct');
-pause(1)
+pub_angle = ros.Publisher(node_matlab, '/theta', 'std_msgs/Float64','DataFormat','struct');
+sub_angle = ros.Subscriber(node_matlab,'/real_angle','std_msgs/Float64','DataFormat','struct');
+pause(1);
+
+disp('Run LabVIEW!');
+pause;
+
 
 while isempty(sub_trigger.LatestMessage)
     pause(1)
+    disp('wait for sub_trigger!');
 end
 
 while sub_trigger.LatestMessage.data
@@ -25,37 +28,36 @@ while sub_trigger.LatestMessage.data
     sample_times_max = 10;
     sensitive_range = 6;
     ros_node = node_matlab;
-    [iteration_coarse_search, spot_range] = coarse_search(TRUS_pos_init, sample_times_max, sensitive_range, ros_node);
+    [iteration_coarse_search, spot_range] = coarse_search(TRUS_pos_init, sample_times_max, sensitive_range, ros_node, pub_angle, sub_angle);
 
     % rotate to the lower boundary of spot_range
-    pub_angle = ros.Publisher(node_matlab, '/theta', 'std_msgs/Float64','DataFormat','struct');
-    sub_angle = ros.Subscriber(node_matlab,'/real_angle','std_msgs/Float64','DataFormat','struct');
-    msg_rorate_angle = rosmessage(pub_angle);
-    msg_rorate_angle.data = spot_range(1);    
-    send(pub_angle, msg_rorate_angle);
-    while abs(sub_angle.LastestMessage.data - msg_rorate_angle.data) >= 0.1
-        pause(1);
-    end
-    disp('rotated to the initial angle of the fine search!')
-    clear('pub_angle', 'sub_angle');
+%     pub_angle = ros.Publisher(node_matlab, '/theta', 'std_msgs/Float64','DataFormat','struct');
+%     sub_angle = ros.Subscriber(node_matlab,'/real_angle','std_msgs/Float64','DataFormat','struct');
+%     msg_rorate_angle = rosmessage(pub_angle);
+%     msg_rorate_angle.data = spot_range(1);    
+%     send(pub_angle, msg_rorate_angle);
+%     while abs(sub_angle.LatestMessage.data - msg_rorate_angle.data) >= 0.1
+%         pause(1);
+%     end
+%     disp('rotated to the initial angle of the fine search!')
+%     clear('pub_angle', 'sub_angle');
 
     % fine search
-    target_angle = fine_search(spot_range, ros_node);
+    target_angle = fine_search(spot_range, ros_node, pub_angle, sub_angle);
 
     % rotate to the target angle
-    pub_angle = ros.Publisher(node_matlab, '/theta', 'std_msgs/Float64','DataFormat','struct');
     msg_rorate_angle = rosmessage(pub_angle);
     msg_rorate_angle.data = target_angle;
     send(pub_angle, msg_rorate_angle);
     pause(1);
-    while abs(sub_angle.LastestMessage.data - msg_rorate_angle.data) >= 0.1
+    while abs(sub_angle.LatestMessage.data - msg_rorate_angle.data) >= 0.1
         pause(1);
     end
     disp('Arrive at the target angle, search completed!');
     
     % calculate PA coordinate 
     % this coordinate is in the gray image, not the original image
-    [x, y, ~] = calculate_PA_coordinates(ros_node);
+    [x, y, ~] = calculate_PA_coordinates(ros_node, target_angle);
     
     % transform the coordinates from the 2D PA image to the Cartesian frame
     r = 5; % the radius of the TRUS
