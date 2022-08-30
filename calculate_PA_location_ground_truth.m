@@ -12,7 +12,7 @@
 
 
 %% set parameters
-function [] = calculate_PA_location_ground_truth(start_pos, end_pos, sample_num)
+function [] = calculate_PA_location_ground_truth(start_pos, end_pos)
 
 angle_list = [];
 u_list = [];
@@ -42,6 +42,7 @@ for i = start_pos : 1 :end_pos
     v_list = [v_list, v];
     angle_list = [angle_list, i];
     intensity_list = [intensity_list, intensity];
+    
 end
 
 disp('sample done!');
@@ -54,27 +55,5 @@ q = input(prompt);
 prompt = 'Please fill in translation: ';
 t = input(prompt);
 
-% q_list = [q_list, q];
-% t_list = [t_list, t];
-
-% Convert to struct
-
-sample = struct;
-
-for j = 1 : (len(angle_list) + 2)
-    if j <= len(angle_list)
-        sample(j) = {angle_list(j), u_list(j), v_list(j), intensity_list(j)};
-    else 
-        if j == len(angle_list) + 1
-            sample(j) = q;
-        else
-            sample(j) = t;
-        end
-    end
-end
-
-% Convert to .yaml format
-
-yaml_name = strcat('sample', num2str(sample_num), 'yaml');
-
-yaml.dumpFile(yaml_name, sample)
+sample = [angle_list; u_list; v_list; intensity_list; q; t];
+save sample.txt sample -ascii;
