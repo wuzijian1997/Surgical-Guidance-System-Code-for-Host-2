@@ -12,9 +12,13 @@
 
 
 %% set parameters
-start_pos = -3;
-end_pos = 1;
+function [] = calculate_PA_location_ground_truth(start_pos, end_pos, sample_num)
+
+angle_list = [];
+u_list = [];
+v_list = [];
 intensity_list = [];
+
 for i = start_pos : 1 :end_pos
     msg_rorate_angle.data = i;
     send(pub_angle, msg_rorate_angle);
@@ -33,7 +37,10 @@ for i = start_pos : 1 :end_pos
 %     folder_name = 'G:\offline_data_phantom\9\degree' + folder_num;
 %     mkdir(folder_name);
 %     copyfile('G:\JHU\EN. 601.656 Computer Integrated Surgery 2\PA_buf1500', folder_name);
-    [~, ~, intensity] = calculate_PA_coordinates(node_matlab, i);
+    [u, v, intensity] = calculate_PA_coordinates(node_matlab, i);
+    u_list = [u_list, u];
+    v_list = [v_list, v];
+    angle_list = [angle_list, i];
     intensity_list = [intensity_list, intensity];
 end
 
@@ -41,3 +48,33 @@ disp('sample done!');
 
 figure;
 plot(start_pos : end_pos, intensity_list, 'r*');
+
+prompt = 'Please fill in quaternion: ';
+q = input(prompt);
+prompt = 'Please fill in translation: ';
+t = input(prompt);
+
+% q_list = [q_list, q];
+% t_list = [t_list, t];
+
+% Convert to struct
+
+sample = struct;
+
+for j = 1 : (len(angle_list) + 2)
+    if j <= len(angle_list)
+        sample(j) = {angle_list(j), u_list(j), v_list(j), intensity_list(j)};
+    else 
+        if j == len(angle_list) + 1
+            sample(j) = q;
+        else
+            sample(j) = t;
+        end
+    end
+end
+
+% Convert to .yaml format
+
+yaml_name = strcat('sample', num2str(sample_num), 'yaml');
+
+yaml.dumpFile(yaml_name, sample)

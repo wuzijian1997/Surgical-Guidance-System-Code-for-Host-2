@@ -4,8 +4,8 @@ bFreqFilter_ = 1;
 pub_image = ros.Publisher(ros_node, '/naive_registration/Display/PA_Image', 'sensor_msgs/Image','DataFormat','struct');
 
 %% DAQ data acquisition setup
-frameNum = 100;
-numSample = 2000;
+frameNum = 145;
+numSample = 1800;
 %% read DAQ data
 [mRcvData,vRcvData] = readDAQData(dir_, frameNum, numSample);
 
@@ -41,7 +41,7 @@ trans_.num_ele = 128;
 
 % beamforming parameter
 bf_.scline = trans_.num_ele;
-bf_.dth = 30e-3;
+bf_.dth = 60e-3;%30e-3;
 bf_.dth_spl = ceil(bf_.dth/acoustic_.unit_dis);
 bf_.f_num = 1; % receive f-number
 bf_.ch = 128;
@@ -85,6 +85,9 @@ center_pos = centroids(idx,:);
 center_pos_mm = zeros(1,2);
 center_pos_mm(1) = interpn(1:128,axis_x,center_pos(1));
 center_pos_mm(2) = interpn(1:bf_.dth_spl,axis_z,center_pos(2));
+disp(strcat('x_coordinate:, ',string(center_pos_mm(1))));
+disp(strcat('y_coordinate:, ',string(center_pos_mm(2))));
+disp(strcat('intensity:, ',string(max_intensity)));
 
 figure(27)
 I = imagesc(axis_x*1e3, axis_z*1e3,img_gray);

@@ -1,4 +1,4 @@
-clear, clc, close all;
+%clear, clc, close all;
 
 % dir_ = uigetdir('..\..\data');
 %dir_ = 'G:\JHU\EN. 601.656 Computer Integrated Surgery 2\paTest'; 
